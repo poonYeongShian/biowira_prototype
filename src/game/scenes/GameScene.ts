@@ -58,6 +58,12 @@ export default class GameScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 16,
     });
+
+    // Sound effects
+    this.load.audio('jumpSfx', 'assets/sounds/jump.wav');
+
+    // Background music
+    this.load.audio('bgMusic', 'assets/music/time_for_adventure.mp3');
   }
 
   create() {
@@ -178,6 +184,9 @@ export default class GameScene extends Phaser.Scene {
     });
 
     this.player.play('idle');
+
+    // Background music
+    this.sound.play('bgMusic', { loop: true, volume: 0.4 });
   }
 
   update() {
@@ -200,6 +209,7 @@ export default class GameScene extends Phaser.Scene {
     // Jump — only when standing on the ground
     if ((this.cursors.up.isDown || this.cursors.space.isDown) && body.blocked.down) {
       body.setVelocityY(this.JUMP_VELOCITY);
+      this.sound.play('jumpSfx');
     }
 
     // Update enemy AI
