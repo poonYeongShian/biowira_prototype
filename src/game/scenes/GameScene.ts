@@ -12,6 +12,9 @@ export default class GameScene extends Phaser.Scene {
   private coins!: Phaser.GameObjects.Group;
   private levelEnd?: Phaser.Physics.Arcade.Sprite;
 
+  private bgMusic!: Phaser.Sound.BaseSound;
+  private muteButton!: Phaser.GameObjects.Image;
+
   private readonly PLAYER_SPEED = 300;
   private readonly JUMP_VELOCITY = -340;
 
@@ -64,6 +67,10 @@ export default class GameScene extends Phaser.Scene {
 
     // Background music
     this.load.audio('bgMusic', 'assets/music/time_for_adventure.mp3');
+
+    // Mute button icons
+    this.load.image('unmuted_button', 'assets/sprites/unmuted_button.png');
+    this.load.image('muted_button', 'assets/sprites/muted_button.png');
   }
 
   create() {
@@ -186,7 +193,19 @@ export default class GameScene extends Phaser.Scene {
     this.player.play('idle');
 
     // Background music
-    this.sound.play('bgMusic', { loop: true, volume: 0.4 });
+    this.bgMusic = this.sound.add('bgMusic', { loop: true, volume: 0.4 });
+    this.bgMusic.play();
+
+    // Mute toggle button (fixed to camera)
+    this.muteButton = this.add.image(this.cameras.main.width - 10, 10, 'unmuted_button')
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(1000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        this.sound.mute = !this.sound.mute;
+        this.muteButton.setTexture(this.sound.mute ? 'muted_button' : 'unmuted_button');
+      });
   }
 
   update() {
