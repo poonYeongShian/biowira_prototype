@@ -26,8 +26,8 @@ export default class GameScene extends Phaser.Scene {
 
     const body = sprite.body as Phaser.Physics.Arcade.Body;
     body.setBounce(0);
-    body.setSize(14, 18);
-    body.setOffset(9, 10);
+    body.setSize(12, 14);
+    body.setOffset(10, 14);
   }
 
   preload() {
