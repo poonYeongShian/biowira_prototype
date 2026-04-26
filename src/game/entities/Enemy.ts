@@ -27,6 +27,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   // State
   private aiState: EnemyState = 'patrol';
   private player: Phaser.Physics.Arcade.Sprite | null = null;
+  private blockingLayer: Phaser.Tilemaps.TilemapLayer | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'slime_green');
@@ -46,8 +47,33 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   /** Call once from GameScene to give the enemy a target */
-  setTarget(player: Phaser.Physics.Arcade.Sprite) {
+  setTarget(player: Phaser.Physics.Arcade.Sprite, blockingLayer?: Phaser.Tilemaps.TilemapLayer) {
     this.player = player;
+    this.blockingLayer = blockingLayer ?? null;
+  }
+
+  private hasLineOfSight() {
+    if (!this.player || !this.blockingLayer) return true;
+
+    const startX = this.x;
+    const startY = this.y - 8;
+    const endX = this.player.x;
+    const endY = this.player.y - 8;
+    const distance = Phaser.Math.Distance.Between(startX, startY, endX, endY);
+    const steps = Math.max(2, Math.ceil(distance / 8));
+
+    for (let index = 1; index < steps; index += 1) {
+      const t = index / steps;
+      const sampleX = Phaser.Math.Linear(startX, endX, t);
+      const sampleY = Phaser.Math.Linear(startY, endY, t);
+      const tile = this.blockingLayer.getTileAtWorldXY(sampleX, sampleY, true);
+
+      if (tile && tile.index !== -1 && tile.collides) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   // ---- State behaviours ----
@@ -98,14 +124,16 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.aiState === 'dead' || !this.player) return;
     if (this.aiState === 'hurt') return;
 
+    const dx = this.player.x - this.x;
     const dist = Phaser.Math.Distance.Between(
       this.x, this.y,
       this.player.x, this.player.y,
     );
+    const hasLineOfSight = this.hasLineOfSight();
 
-    if (dist <= this.attackRange) {
+    if (dist <= this.attackRange && hasLineOfSight) {
       this.aiState = 'attack';
-    } else if (dist <= this.aggroRange) {
+    } else if (Math.abs(dx) <= this.aggroRange && hasLineOfSight) {
       this.aiState = 'chase';
     } else {
       this.aiState = 'patrol';

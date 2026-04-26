@@ -122,7 +122,7 @@ export default class GameScene extends Phaser.Scene {
     objects.forEach(obj => {
       if (obj.type === 'enemy') {
         const enemy = new Enemy(this, obj.x!, obj.y! - 1);
-        enemy.setTarget(this.player);
+        enemy.setTarget(this.player, this.platformLayer);
         this.enemies.add(enemy);
         this.enemyInstances.push(enemy);
       }
