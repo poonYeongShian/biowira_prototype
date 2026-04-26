@@ -1,3 +1,15 @@
+@font-face {
+  font-family: 'PixelOperator8';
+  src: url('/assets/fonts/PixelOperator8.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PixelOperator8Bold';
+  src: url('/assets/fonts/PixelOperator8-Bold.ttf') format('truetype');
+  font-display: swap;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -11,8 +23,6 @@ body {
   align-items: center;
   min-height: 100vh;
   overflow: hidden;
-}
-
 }
 
 #app {

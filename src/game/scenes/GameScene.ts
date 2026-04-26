@@ -13,6 +13,7 @@ export default class GameScene extends Phaser.Scene {
   private levelEnd?: Phaser.Physics.Arcade.Sprite;
 
   private bgMusic!: Phaser.Sound.BaseSound;
+  private gameOverAudio?: HTMLAudioElement;
   private muteButton!: Phaser.GameObjects.Image;
 
   // Health system: 3 hearts × 4 quarters = 12 HP
@@ -21,6 +22,8 @@ export default class GameScene extends Phaser.Scene {
   private health!: number;               // current HP in quarter-units
   private heartSprites: Phaser.GameObjects.Sprite[] = [];
   private invulnerable = false;
+  private gameOverShown = false;
+  private gameOverAudioUnlocked = false;
 
   private readonly PLAYER_SPEED = 300;
   private readonly JUMP_VELOCITY = -340;
@@ -90,6 +93,38 @@ export default class GameScene extends Phaser.Scene {
   create() {
     // Sky background
     this.cameras.main.setBackgroundColor(0x87ceeb);
+
+    void document.fonts?.load('32px PixelOperator8Bold');
+    void document.fonts?.load('18px PixelOperator8Bold');
+
+    this.gameOverAudio = new Audio('/assets/music/game_over.mp3');
+    this.gameOverAudio.preload = 'auto';
+    this.gameOverAudio.volume = 1;
+    this.gameOverAudio.muted = this.sound.mute;
+    this.gameOverAudio.load();
+
+    const unlockGameOverAudio = () => {
+      if (!this.gameOverAudio || this.gameOverAudioUnlocked) return;
+
+      this.gameOverAudio.muted = true;
+      void this.gameOverAudio.play()
+        .then(() => {
+          this.gameOverAudio?.pause();
+          if (this.gameOverAudio) {
+            this.gameOverAudio.currentTime = 0;
+            this.gameOverAudio.muted = this.sound.mute;
+          }
+          this.gameOverAudioUnlocked = true;
+        })
+        .catch(() => {
+          if (this.gameOverAudio) {
+            this.gameOverAudio.muted = this.sound.mute;
+          }
+        });
+    };
+
+    this.input.once('pointerdown', unlockGameOverAudio);
+    this.input.keyboard?.once('keydown', unlockGameOverAudio);
 
     // --- Tilemap setup ---
     const map = this.make.tilemap({ key: 'level1' });
@@ -218,6 +253,9 @@ export default class GameScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         this.sound.mute = !this.sound.mute;
+        if (this.gameOverAudio) {
+          this.gameOverAudio.muted = this.sound.mute;
+        }
         this.muteButton.setTexture(this.sound.mute ? 'muted_button' : 'unmuted_button');
       });
 
@@ -303,9 +341,91 @@ export default class GameScene extends Phaser.Scene {
     });
 
     if (this.health <= 0) {
-      this.player.setTint(0xff0000);
-      this.physics.pause();
+      this.triggerGameOver();
     }
+  }
+
+  /** Enter the game over state once, even if optional audio failed to load. */
+  private triggerGameOver() {
+    if (this.gameOverShown) return;
+
+    this.gameOverShown = true;
+    this.invulnerable = true;
+    this.player.setTint(0xff0000);
+    this.physics.pause();
+
+    if (this.bgMusic.isPlaying) {
+      this.bgMusic.stop();
+    }
+
+    this.showGameOver();
+
+    this.playGameOverMusic();
+  }
+
+  /** Play game-over music without depending on Phaser's audio cache. */
+  private playGameOverMusic() {
+    if (!this.gameOverAudio) {
+      this.gameOverAudio = new Audio('/assets/music/game_over.mp3');
+      this.gameOverAudio.preload = 'auto';
+      this.gameOverAudio.volume = 1;
+    }
+
+    this.gameOverAudio.pause();
+    this.gameOverAudio.currentTime = 0;
+    this.gameOverAudio.muted = this.sound.mute;
+    this.gameOverAudio.load();
+    void this.gameOverAudio.play().catch(() => undefined);
+  }
+
+  /** Show a Game Over overlay with a "Try Again" button. */
+  private showGameOver() {
+    const cam = this.cameras.main;
+
+    // Dark overlay
+    this.add.rectangle(
+      cam.width / 2, cam.height / 2,
+      cam.width, cam.height,
+      0x000000, 0.6,
+    )
+      .setScrollFactor(0)
+      .setDepth(2000);
+
+    // "GAME OVER" text
+    this.add.text(cam.width / 2, cam.height / 2 - 20, 'GAME OVER', {
+      fontSize: '32px',
+      color: '#ff4444',
+      fontFamily: 'PixelOperator8Bold',
+      resolution: 3,
+    })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(2001);
+
+    // "Try Again" button
+    const tryAgain = this.add.text(cam.width / 2, cam.height / 2 + 16, 'Try Again', {
+      fontSize: '10px',
+      color: '#ffffff',
+      backgroundColor: '#444444',
+      fontFamily: 'PixelOperator8Bold',
+      padding: { x: 8, y: 4 },
+      resolution: 3,
+    })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(2001)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => tryAgain.setStyle({ backgroundColor: '#666666' }))
+      .on('pointerout', () => tryAgain.setStyle({ backgroundColor: '#444444' }))
+      .on('pointerdown', () => {
+        this.sound.stopAll();
+        if (this.gameOverAudio) {
+          this.gameOverAudio.pause();
+          this.gameOverAudio.currentTime = 0;
+        }
+        this.gameOverShown = false;
+        this.scene.restart();
+      });
   }
 
   /** Sync heart sprites with current health value. */
