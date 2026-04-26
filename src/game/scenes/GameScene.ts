@@ -71,6 +71,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Sound effects
     this.load.audio('jumpSfx', 'assets/sounds/jump.wav');
+    this.load.audio('hurtSfx', 'assets/sounds/hurt.wav');
 
     // Background music
     this.load.audio('bgMusic', 'assets/music/time_for_adventure.mp3');
@@ -232,8 +233,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Enemy overlap → take damage
-    this.physics.add.overlap(this.player, this.enemies, () => {
-      this.takeDamage(1);
+    this.physics.add.overlap(this.player, this.enemies, (_player, enemy) => {
+      this.takeDamage(1, enemy as Phaser.Physics.Arcade.Sprite);
     });
   }
 
@@ -267,11 +268,31 @@ export default class GameScene extends Phaser.Scene {
   }
 
   /** Remove `amount` quarter-hearts of health and refresh the HUD. */
-  private takeDamage(amount: number) {
+  private takeDamage(amount: number, source?: Phaser.Physics.Arcade.Sprite) {
     if (this.invulnerable || this.health <= 0) return;
 
     this.health = Math.max(0, this.health - amount);
     this.updateHeartDisplay();
+
+    // Hurt sound
+    this.sound.play('hurtSfx');
+
+    // Knockback away from the damage source
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const knockX = source && source.x < this.player.x ? 200 : -200;
+    body.setVelocity(knockX, -180);
+
+    // Shake hearts
+    for (const heart of this.heartSprites) {
+      this.tweens.add({
+        targets: heart,
+        x: heart.x + 3,
+        duration: 40,
+        yoyo: true,
+        repeat: 5,
+        ease: 'Sine.easeInOut',
+      });
+    }
 
     // Brief invulnerability + flash
     this.invulnerable = true;
