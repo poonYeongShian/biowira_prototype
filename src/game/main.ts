@@ -15,6 +15,7 @@ export function launchGame(parent: string | HTMLElement): Phaser.Game {
         debug: false,
       },
     },
+    pixelArt: true,
     scene: [GameScene],
   });
 }

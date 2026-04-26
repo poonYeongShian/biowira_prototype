@@ -88,6 +88,9 @@ export default class GameScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 16,
     });
+
+    // Bitmap font for crisp pixel-perfect text
+    this.load.bitmapFont('nokia16', 'assets/fonts/nokia16.png', 'assets/fonts/nokia16.xml');
   }
 
   create() {
@@ -391,32 +394,25 @@ export default class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(2000);
 
-    // "GAME OVER" text
-    this.add.text(cam.width / 2, cam.height / 2 - 20, 'GAME OVER', {
-      fontSize: '32px',
-      color: '#ff4444',
-      fontFamily: 'PixelOperator8Bold',
-      resolution: 3,
-    })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(2001);
-
-    // "Try Again" button
-    const tryAgain = this.add.text(cam.width / 2, cam.height / 2 + 16, 'Try Again', {
-      fontSize: '10px',
-      color: '#ffffff',
-      backgroundColor: '#444444',
-      fontFamily: 'PixelOperator8Bold',
-      padding: { x: 8, y: 4 },
-      resolution: 3,
-    })
+    // "GAME OVER" text (bitmap font, scaled 2× for large heading)
+    this.add.bitmapText(cam.width / 2, cam.height / 2 - 28, 'nokia16', 'GAME OVER', 16)
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(2001)
+      .setTint(0xff4444)
+      .setScale(2);
+
+    // "Try Again" button background
+    const btnW = 80;
+    const btnH = 20;
+    const btnX = cam.width / 2;
+    const btnY = cam.height / 2 + 16;
+    const btnBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x444444)
+      .setScrollFactor(0)
+      .setDepth(2001)
       .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => tryAgain.setStyle({ backgroundColor: '#666666' }))
-      .on('pointerout', () => tryAgain.setStyle({ backgroundColor: '#444444' }))
+      .on('pointerover', () => btnBg.setFillStyle(0x666666))
+      .on('pointerout', () => btnBg.setFillStyle(0x444444))
       .on('pointerdown', () => {
         this.sound.stopAll();
         if (this.gameOverAudio) {
@@ -426,6 +422,13 @@ export default class GameScene extends Phaser.Scene {
         this.gameOverShown = false;
         this.scene.restart();
       });
+
+    // "Try Again" label (bitmap font, native 16px)
+    this.add.bitmapText(btnX, btnY, 'nokia16', 'Try Again', 16)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(2002)
+      .setTint(0xffffff);
   }
 
   /** Sync heart sprites with current health value. */
