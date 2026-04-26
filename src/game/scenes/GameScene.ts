@@ -15,6 +15,13 @@ export default class GameScene extends Phaser.Scene {
   private bgMusic!: Phaser.Sound.BaseSound;
   private muteButton!: Phaser.GameObjects.Image;
 
+  // Health system: 3 hearts × 4 quarters = 12 HP
+  private readonly MAX_HEARTS = 3;
+  private readonly QUARTERS_PER_HEART = 4;
+  private health!: number;               // current HP in quarter-units
+  private heartSprites: Phaser.GameObjects.Sprite[] = [];
+  private invulnerable = false;
+
   private readonly PLAYER_SPEED = 300;
   private readonly JUMP_VELOCITY = -340;
 
@@ -71,6 +78,12 @@ export default class GameScene extends Phaser.Scene {
     // Mute button icons
     this.load.image('unmuted_button', 'assets/sprites/unmuted_button.png');
     this.load.image('muted_button', 'assets/sprites/muted_button.png');
+
+    // Heart spritesheet (5 frames: full, 3/4, 1/2, 1/4, empty)
+    this.load.spritesheet('heart', 'assets/sprites/heart_spritesheet_16x16.png', {
+      frameWidth: 16,
+      frameHeight: 16,
+    });
   }
 
   create() {
@@ -206,6 +219,22 @@ export default class GameScene extends Phaser.Scene {
         this.sound.mute = !this.sound.mute;
         this.muteButton.setTexture(this.sound.mute ? 'muted_button' : 'unmuted_button');
       });
+
+    // Health display
+    this.health = this.MAX_HEARTS * this.QUARTERS_PER_HEART; // 12
+    this.heartSprites = [];
+    for (let i = 0; i < this.MAX_HEARTS; i++) {
+      const heart = this.add.sprite(10 + i * 18, 10, 'heart', 0)
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(1000);
+      this.heartSprites.push(heart);
+    }
+
+    // Enemy overlap → take damage
+    this.physics.add.overlap(this.player, this.enemies, () => {
+      this.takeDamage(1);
+    });
   }
 
   update() {
@@ -234,6 +263,41 @@ export default class GameScene extends Phaser.Scene {
     // Update enemy AI
     for (const enemy of this.enemyInstances) {
       if (enemy.active) enemy.update();
+    }
+  }
+
+  /** Remove `amount` quarter-hearts of health and refresh the HUD. */
+  private takeDamage(amount: number) {
+    if (this.invulnerable || this.health <= 0) return;
+
+    this.health = Math.max(0, this.health - amount);
+    this.updateHeartDisplay();
+
+    // Brief invulnerability + flash
+    this.invulnerable = true;
+    this.player.setTint(0xff0000);
+    this.time.delayedCall(1000, () => {
+      this.invulnerable = false;
+      this.player.clearTint();
+    });
+
+    if (this.health <= 0) {
+      this.player.setTint(0xff0000);
+      this.physics.pause();
+    }
+  }
+
+  /** Sync heart sprites with current health value. */
+  private updateHeartDisplay() {
+    for (let i = 0; i < this.MAX_HEARTS; i++) {
+      const quartersLeft = Phaser.Math.Clamp(
+        this.health - i * this.QUARTERS_PER_HEART,
+        0,
+        this.QUARTERS_PER_HEART,
+      );
+      // frame 0 = full (4/4), 1 = 3/4, 2 = 2/4, 3 = 1/4, 4 = empty (0/4)
+      const frame = this.QUARTERS_PER_HEART - quartersLeft;
+      this.heartSprites[i].setFrame(frame);
     }
   }
 }
