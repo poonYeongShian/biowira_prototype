@@ -12,8 +12,11 @@ export default class GameScene extends Phaser.Scene {
   private enemies!: Phaser.Physics.Arcade.Group;
   private enemyInstances: Enemy[] = [];
   private allies!: Phaser.Physics.Arcade.Group;
-  private coins!: Phaser.GameObjects.Group;
+  private coins!: Phaser.Physics.Arcade.Group;
   private levelEnd?: Phaser.Physics.Arcade.Sprite;
+
+  private coinCount = 0;
+  private coinText!: Phaser.GameObjects.BitmapText;
 
   private bgMusic!: Phaser.Sound.BaseSound;
   private muteButton!: Phaser.GameObjects.Image;
@@ -122,7 +125,10 @@ export default class GameScene extends Phaser.Scene {
     // --- Spawn objects ---
     this.enemies = this.physics.add.group();
     this.allies = this.physics.add.group();
-    this.coins = this.add.group();
+    this.coins = this.physics.add.group({
+      allowGravity: false,
+      immovable: true,
+    });
 
     objects.forEach((obj) => {
       if (obj.type === "enemy") {
@@ -147,10 +153,13 @@ export default class GameScene extends Phaser.Scene {
         this.allies.add(ally);
       }
       if (obj.type === "coin") {
-        const coin = this.add.sprite(obj.x!, obj.y! - 6, "coin");
+        const coin = this.coins.create(
+          obj.x!,
+          obj.y! - 6,
+          "coin",
+        ) as Phaser.Physics.Arcade.Sprite;
         coin.setOrigin(0.5, 1);
         coin.play("coin_spin");
-        this.coins.add(coin);
       }
       if (obj.type === "trigger" && obj.name === "level_end") {
         this.levelEnd = this.physics.add.sprite(obj.x!, obj.y!, "__DEFAULT");
@@ -194,6 +203,23 @@ export default class GameScene extends Phaser.Scene {
 
     // Health HUD
     this.healthDisplay = new HealthDisplay(this);
+
+    // Coin HUD (below hearts)
+    this.add.sprite(10, 28, "coin", 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(1000);
+    this.coinText = this.add.bitmapText(28, 32, "nokia16", "x0", 16)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(1000);
+
+    // Coin collection
+    this.physics.add.overlap(this.player, this.coins, (_player, coin) => {
+      (coin as Phaser.Physics.Arcade.Sprite).destroy();
+      this.coinCount++;
+      this.coinText.setText(`x${this.coinCount}`);
+    });
 
     // Enemy overlap → take damage
     this.physics.add.overlap(this.player, this.enemies, (_player, enemy) => {
