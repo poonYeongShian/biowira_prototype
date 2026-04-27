@@ -135,6 +135,10 @@ export default class GameScene extends Phaser.Scene {
       if (obj.type === "enemy") {
         const enemy = new Enemy(this, obj.x!, obj.y! - 1);
         enemy.setTarget(this.player, this.platformLayer);
+        enemy.setDamageCallback((dmg) => {
+          const died = this.healthDisplay.takeDamage(dmg, this.player, enemy);
+          if (died) this.gameOverManager.trigger(this.bgMusic, this.player);
+        });
         this.enemies.add(enemy);
         this.enemyInstances.push(enemy);
       }
@@ -221,18 +225,6 @@ export default class GameScene extends Phaser.Scene {
       this.coinCount++;
       this.coinText.setText(`x${this.coinCount}`);
       this.sound.play("coinSfx");
-    });
-
-    // Enemy overlap → take damage
-    this.physics.add.overlap(this.player, this.enemies, (_player, enemy) => {
-      const died = this.healthDisplay.takeDamage(
-        1,
-        this.player,
-        enemy as Phaser.Physics.Arcade.Sprite,
-      );
-      if (died) {
-        this.gameOverManager.trigger(this.bgMusic, this.player);
-      }
     });
   }
 

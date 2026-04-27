@@ -16,7 +16,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   // AI ranges
   private aggroRange = 120;
   private attackRange = 20;
-  private attackCooldown = 1000;
+  private attackCooldown = 600;
   private canAttack = true;
 
   // Patrol
@@ -28,6 +28,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   private aiState: EnemyState = 'patrol';
   private player: Phaser.Physics.Arcade.Sprite | null = null;
   private blockingLayer: Phaser.Tilemaps.TilemapLayer | null = null;
+  private onDamagePlayer: ((damage: number) => void) | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'slime_green');
@@ -50,6 +51,11 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   setTarget(player: Phaser.Physics.Arcade.Sprite, blockingLayer?: Phaser.Tilemaps.TilemapLayer) {
     this.player = player;
     this.blockingLayer = blockingLayer ?? null;
+  }
+
+  /** Register a callback that is invoked each time the enemy lands an attack hit. */
+  setDamageCallback(callback: (damage: number) => void) {
+    this.onDamagePlayer = callback;
   }
 
   private hasLineOfSight() {
@@ -124,14 +130,26 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   private updateAttack() {
     this.setVelocityX(0);
 
+    // Always face the player while attacking
+    this.setFlipX(this.player!.x < this.x);
+
     if (this.canAttack) {
       this.canAttack = false;
 
-      // TODO: call player.takeDamage(this.damage) once Player entity exists
+      // Orange flash to signal the hit
+      this.setTint(0xff8800);
+      this.scene.time.delayedCall(150, () => {
+        if (this.active) this.clearTint();
+      });
+
+      this.onDamagePlayer?.(this.damage);
+
       this.scene.time.delayedCall(this.attackCooldown, () => {
         this.canAttack = true;
       });
     }
+
+    this.anims.play('slime_idle', true);
   }
 
   // ---- Main loop ----
