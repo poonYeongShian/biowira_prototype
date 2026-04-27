@@ -85,8 +85,24 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setVelocityX(this.speed * this.patrolDirection);
     this.setFlipX(this.patrolDirection === -1);
 
+    // Reverse on reaching patrol bounds
     if (this.x >= rightBound) this.patrolDirection = -1;
     if (this.x <= leftBound) this.patrolDirection = 1;
+
+    // Reverse when hitting a wall
+    if (this.body.blocked.left) this.patrolDirection = 1;
+    if (this.body.blocked.right) this.patrolDirection = -1;
+
+    // Reverse at platform edge (no ground ahead)
+    if (this.body.blocked.down && this.blockingLayer) {
+      const probeX = this.x + this.patrolDirection * 10;
+      const probeY = this.y + 4;
+      const tile = this.blockingLayer.getTileAtWorldXY(probeX, probeY, true);
+      if (!tile || tile.index === -1 || !tile.collides) {
+        this.patrolDirection *= -1;
+        this.setVelocityX(0);
+      }
+    }
 
     this.anims.play('slime_idle', true);
   }
