@@ -67,6 +67,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.load.audio("jumpSfx", "assets/sounds/jump.wav");
     this.load.audio("hurtSfx", "assets/sounds/hurt.wav");
+    this.load.audio("coinSfx", "assets/sounds/coin.wav");
     this.load.audio("bgMusic", "assets/music/time_for_adventure.mp3");
 
     this.load.image("unmuted_button", "assets/sprites/unmuted_button.png");
@@ -205,7 +206,7 @@ export default class GameScene extends Phaser.Scene {
     this.healthDisplay = new HealthDisplay(this);
 
     // Coin HUD (below hearts)
-    this.add.sprite(10, 28, "coin", 0)
+    this.add.sprite(10, 32, "coin", 0)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(1000);
@@ -219,6 +220,7 @@ export default class GameScene extends Phaser.Scene {
       (coin as Phaser.Physics.Arcade.Sprite).destroy();
       this.coinCount++;
       this.coinText.setText(`x${this.coinCount}`);
+      this.sound.play("coinSfx");
     });
 
     // Enemy overlap → take damage
